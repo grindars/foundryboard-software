@@ -32,7 +32,7 @@ static inline void DispatchEnableInterrupts(unsigned int Disabled) {
 static inline unsigned int DispatchEnterSystem(void) {
     unsigned int Saved = __get_BASEPRI();
 
-    __set_BASEPRI(DISPATCH_PENDSV_PRIORITY);
+    __set_BASEPRI(DISPATCH_PENDSV_PRIORITY << (8 - __NVIC_PRIO_BITS));
 
     return Saved;
 }
@@ -42,6 +42,7 @@ static inline void DispatchLeaveSystem(unsigned int Saved) {
 }
 
 void DispatchDefer(DISPATCH_DEFERRED_PROC *Proc);
+void DispatchAbandon(DISPATCH_DEFERRED_PROC *Proc);
 
 static inline void DispatchIdle(void) {
     __WFI();

@@ -250,7 +250,6 @@ static void STM32LGPIOpCancel(CORE_IO_OPERATION Operation, IO_DRV_COMPLETION_CAL
 }
 
 const IO_DRIVER STM32LGPIO = {
-    .DriverParameter = 0,
     .DeviceDataSize = sizeof(STM32LGPIO_DEVICE_DATA),
     .HandleDataSize = sizeof(STM32LGPIO_HANDLE_DATA),
     .OperationDataSize = 0,

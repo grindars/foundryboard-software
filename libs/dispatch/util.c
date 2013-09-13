@@ -85,3 +85,48 @@ void IoHaltWithStatus(IOSTATUS Status) {
     (void) Status;
     while(1);
 }
+
+void IoDrvOperationQueueInitialize(IO_DRV_OPERATION_QUEUE *Queue, IO_DRV_QUEUE_OPERATION Execute, IO_DRV_QUEUE_OPERATION Abort) {
+    ListInit(&Queue->Head);
+    Queue->Execute = Execute;
+    Queue->Abort = Abort;
+}
+
+void IoDrvOperationQueueSubmit(IO_DRV_OPERATION_QUEUE *Queue, CORE_IO_OPERATION Operation) {
+    int WasEmpty = ListEmpty(&Queue->Head);
+    IO_DRV_OPERATION_QUEUE_HANDLE_DATA *Data = IoDrvData(Operation);
+    ListAppend(&Queue->Head, &Data->Head);
+
+    if(WasEmpty)
+        Queue->Execute(Operation);
+}
+
+void IoDrvOperationQueueCancel(IO_DRV_OPERATION_QUEUE *Queue, CORE_IO_OPERATION Operation) {
+    IO_DRV_OPERATION_QUEUE_HANDLE_DATA *Data = IoDrvData(Operation);
+
+    if(&Data->Head == Queue->Head.Next) {
+        Queue->Abort(Operation);
+    } else {
+        ListRemove(&Data->Head);
+        IoDrvComplete(Operation, IOSTATUS_CANCELLED);
+    }
+}
+
+void IoDrvOperationQueueComplete(IO_DRV_OPERATION_QUEUE *Queue, IOSTATUS Status) {
+    CORE_IO_OPERATION Operation = IoDrvOperationQueueCurrent(Queue);
+    ListRemove(Queue->Head.Next);
+
+    IoDrvComplete(Operation, Status);
+
+    if(!ListEmpty(&Queue->Head)) {
+        Queue->Execute(IoDrvOperationQueueCurrent(Queue));
+    }
+}
+
+void *IoDrvData(CORE_IO_OPERATION Operation) {
+    return &Operation->DriverData;
+}
+
+CORE_IO_OPERATION IoDrvOperationQueueCurrent(IO_DRV_OPERATION_QUEUE *Queue) {
+    return (CORE_IO_OPERATION)((char *) Queue->Head.Next - (unsigned int) IoDrvData(NULL));
+}

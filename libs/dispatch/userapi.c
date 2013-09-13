@@ -109,6 +109,10 @@ IOSTATUS IoSynchronize(IO_OPERATION *Operations, size_t Count, TIME Timeout, TIM
 IOSTATUS IoRelease(IO_OPERATION Operation) {
     unsigned int Saved = DispatchEnterSystem();
 
+    if(Operation->DeferredProc.Handler) {
+        DispatchAbandon(&Operation->DeferredProc);
+    }
+
     Operation->Core->User = NULL;
     free(Operation);
 

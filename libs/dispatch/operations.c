@@ -32,6 +32,7 @@ void IoDrvSubmit(HANDLE Handle, unsigned int Request, void *Buffer, size_t Buffe
     Core->Buffer = Buffer;
     Core->Size = BufferSize;
 
+    User->DeferredProc.Handler = NULL;
     User->Core = Core;
     User->Status = IOSTATUS_PENDING;
     User->BytesTransferred = 0;
@@ -73,8 +74,18 @@ void IoDrvSubscribe(IO_OPERATION Operation, IO_OPERATION_COMPLETION_CALLBACK Cal
     Operation->Callback = Callback;
     Operation->CallbackArg = CallbackArg;
 
-    if(Operation->Status != IOSTATUS_PENDING && Operation->Callback != NULL)
-        Operation->Callback(Operation->Status, Operation, Operation->BytesTransferred, Operation->CallbackArg);
+    if(Operation->Status != IOSTATUS_PENDING && Operation->Callback != NULL && Operation->DeferredProc.Handler == NULL)
+        IopInvokeCallback(Operation);
+}
+
+void IopInvokeCallback(IO_OPERATION Operation) {
+    Operation->DeferredProc.Handler = IopInvokeDeferred;
+    DispatchDefer(&Operation->DeferredProc);
+}
+
+void IopInvokeDeferred(DISPATCH_DEFERRED_PROC *Proc) {
+    IO_OPERATION Operation = (IO_OPERATION) Proc;
+    Operation->Callback(Operation->Status, Operation, Operation->BytesTransferred, Operation->CallbackArg);
 }
 
 void IoDrvAddTransferred(CORE_IO_OPERATION Operation, unsigned int Bytes) {
@@ -90,8 +101,8 @@ void IoDrvComplete(CORE_IO_OPERATION Operation, IOSTATUS Status) {
 
     if(User) {
         User->Status = Status;
-        if(User->Callback)
-            User->Callback(User->Status, User, User->BytesTransferred, User->CallbackArg);
+        if(User->Callback && User->DeferredProc.Handler == NULL)
+            IopInvokeCallback(User);
     }
 }
 

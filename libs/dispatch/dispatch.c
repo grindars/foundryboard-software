@@ -42,7 +42,15 @@ void DispatchDefer(DISPATCH_DEFERRED_PROC *Proc) {
     DispatchEnableInterrupts(Interrupts);
 
     SCB->ICSR = SCB_ICSR_PENDSVSET_Msk;
-    __DSB();
+    __DMB();
+}
+
+void DispatchAbandon(DISPATCH_DEFERRED_PROC *Proc) {
+    unsigned int Interrupts = DispatchDisableInterrupts();
+
+    ListRemove(&Proc->Head);
+
+    DispatchEnableInterrupts(Interrupts);        
 }
 
 void PendSV_Handler(void) {

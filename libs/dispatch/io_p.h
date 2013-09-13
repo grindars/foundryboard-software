@@ -2,6 +2,7 @@
 #define __IO__P__H__
 
 #include <io.h>
+#include <dispatch.h>
 
 #define HANDLE_OPENING  ((unsigned int) -2)
 #define HANDLE_CLOSING  ((unsigned int) -1)
@@ -35,6 +36,7 @@ struct IOP_CORE_IO_OPERATION {
 };
 
 struct IOP_USER_IO_OPERATION {
+    DISPATCH_DEFERRED_PROC DeferredProc;
     IOP_CORE_IO_OPERATION *Core;
     IOSTATUS Status;
     unsigned int BytesTransferred;
@@ -98,6 +100,9 @@ void IopDrvDuplicateHandleComplete(IOSTATUS Status, void *Argument);
 void IopDrvCloseHandleComplete(IOSTATUS Status, void *Argument);
 
 void IopDrvSubmitComplete(IOSTATUS Status, void *Argument);
+
+void IopInvokeCallback(IO_OPERATION Operation);
+void IopInvokeDeferred(DISPATCH_DEFERRED_PROC *Proc);
 
 #endif
 
